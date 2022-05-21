@@ -1,5 +1,5 @@
 import Utility.DBConnector as Connector
-from Utility.ReturnValue import ReturnValue
+from Utility.Status import Status
 from Utility.Exceptions import DatabaseException
 from Utility.DBConnector import ResultSet
 from psycopg2 import sql
@@ -81,7 +81,7 @@ def getUsers(printSchema) -> ResultSet:
         return result
 
 
-def addUser(ID: int, name: str) -> ReturnValue:
+def addUser(ID: int, name: str) -> Status:
     conn = None
     try:
         conn = Connector.DBConnector()
@@ -103,7 +103,7 @@ def addUser(ID: int, name: str) -> ReturnValue:
         print(e)
     finally:
         conn.close()
-        return ReturnValue.OK
+        return Status.OK
 
 
 def deleteUser(ID: int, persistent: bool = True) -> int:
