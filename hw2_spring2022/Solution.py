@@ -132,8 +132,6 @@ def addFile(file: File) -> Status:
             DiskSizeNeeded=sql.Literal(file.getSize()))
         rows_effected, _ = conn.execute(query)
         conn.commit()
-    except DatabaseException.ConnectionInvalid as e:
-        return Status.ERROR
     except DatabaseException.CHECK_VIOLATION as e:
         return Status.BAD_PARAMS
     except DatabaseException.UNIQUE_VIOLATION as e:
@@ -174,13 +172,15 @@ def deleteFile(file: File) -> Status:
             Type=sql.Literal(file.getType()),
             Size=sql.Literal(file.getSize()))
 
-        conn.execute(query)
+        rows_effected, _ = conn.execute(query)
         conn.commit()
     except DatabaseException as e:
         return Status.ERROR
     finally:
         if conn:
             conn.close()
+    if rows_effected == 0:
+        return Status.ERROR
     return Status.OK
 
 
@@ -197,8 +197,6 @@ def addDisk(disk: Disk) -> Status:
             CostPerByte=sql.Literal(disk.getCost()))
         rows_effected, _ = conn.execute(query)
         conn.commit()
-    except DatabaseException.ConnectionInvalid as e:
-        return Status.ERROR
     except DatabaseException.CHECK_VIOLATION as e:
         return Status.BAD_PARAMS
     except DatabaseException.UNIQUE_VIOLATION as e:
@@ -232,22 +230,102 @@ def getDiskByID(diskID: int) -> Disk:
 
 
 def deleteDisk(diskID: int) -> Status:
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("DELETE FROM Disks WHERE DiskId = {diskID}").format(diskID=sql.Literal(diskID))
+        rows_effected, _ = conn.execute(query)
+        conn.commit()
+    except DatabaseException as e:
+        return Status.ERROR
+    finally:
+        if conn:
+            conn.close()
+    if rows_effected == 0:
+        return Status.NOT_EXISTS
     return Status.OK
 
 
 def addRAM(ram: RAM) -> Status:
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL(
+            "INSERT INTO Rams VALUES({RamId}, {Size}, {Company})").format(
+            RamId=sql.Literal(ram.getRamID()),
+            Size=sql.Literal(ram.getSize()),
+            Company=sql.Literal(ram.getCompany()))
+        rows_effected, _ = conn.execute(query)
+        conn.commit()
+    except DatabaseException.CHECK_VIOLATION as e:
+        return Status.BAD_PARAMS
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        return Status.ALREADY_EXISTS
+    except DatabaseException.NOT_NULL_VIOLATION:
+        return Status.BAD_PARAMS
+    except Exception as e:
+        return Status.ERROR
+    finally:
+        if conn:
+            conn.close()
     return Status.OK
 
 
 def getRAMByID(ramID: int) -> RAM:
-    return RAM()
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("SELECT * FROM Rams WHERE ramID = {ramID}").format(ramID=sql.Literal(ramID))
+        rows_effected, result = conn.execute(query)
+        conn.commit()
+    except Exception as e:
+        return RAM.badRAM()
+    finally:
+        if conn:
+            conn.close()
+    if result.isEmpty():
+        return RAM.badRAM()
+    return RAM(result[0]['ramid'], result[0]['company'], result[0]['size'])
 
 
 def deleteRAM(ramID: int) -> Status:
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("DELETE FROM Rams WHERE ramID = {ramID}").format(ramID=sql.Literal(ramID))
+        rows_effected, _ = conn.execute(query)
+        conn.commit()
+    except DatabaseException as e:
+        return Status.ERROR
+    finally:
+        if conn:
+            conn.close()
+    if rows_effected == 0:
+        return Status.NOT_EXISTS
     return Status.OK
 
 
 def addDiskAndFile(disk: Disk, file: File) -> Status:
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        add_file = f"INSERT INTO Files VALUES ({file.getFileID()}, '{file.getType()}', {file.getSize()});"
+        add_disk = f"INSERT INTO Disks VALUES ({disk.getDiskID()}, '{disk.getCompany()}', " \
+                   f"{disk.getSpeed()}, {disk.getFreeSpace()}, {disk.getCost()});"
+        query = sql.SQL(f"BEGIN; "
+                        f"{add_disk} "
+                        f"{add_file} "
+                        f"COMMIT;")
+        conn.execute(query)
+    except DatabaseException.UNIQUE_VIOLATION:
+        conn.rollback()
+        return Status.ALREADY_EXISTS
+    except DatabaseException:
+        conn.rollback()
+        return Status.ERROR
+    finally:
+        if conn:
+            conn.close()
     return Status.OK
 
 
