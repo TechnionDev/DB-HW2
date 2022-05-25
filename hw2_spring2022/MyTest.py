@@ -28,7 +28,6 @@ class Test(AbstractTest):
         self.assertEqual(Status.OK, Solution.deleteDisk(3), "Should work")
         self.assertEqual(Status.NOT_EXISTS, Solution.deleteDisk(9), "Should work")
 
-
     def test_RAM(self) -> None:
         self.assertEqual(Status.OK, Solution.addRAM(RAM(1, "Kingston", 10)), "Should work")
         self.assertEqual(Status.OK, Solution.addRAM(RAM(2, "Kingston", 10)), "Should work")
@@ -43,8 +42,6 @@ class Test(AbstractTest):
         self.assertEqual(None, Solution.getRAMByID(3).getRamID(), "Should work")
         self.assertEqual(Status.NOT_EXISTS, Solution.deleteRAM(9), "Should work")
 
-
-
     def test_File(self) -> None:
         self.assertEqual(Status.OK, Solution.addFile(File(1, "wav", 10)), "Should work")
         self.assertEqual(Status.OK, Solution.addFile(File(2, "wav", 10)), "Should work")
@@ -57,6 +54,28 @@ class Test(AbstractTest):
         self.assertEqual(None, Solution.getFileByID(9).getFileID(), "ID 9 doesn't exists")
         self.assertEqual(Status.OK, Solution.deleteFile(File(3, "wav", 10)), "Should work")
         self.assertEqual(None, Solution.getFileByID(3).getFileID(), "ID 3 doesn't exists")
+
+    def test_BasicApi_FilesOnDisks(self) -> None:
+        self.assertEqual(Status.ERROR, Solution.addDiskAndFile(Disk(-1, "DELL", 10, 11, 12), File(1, "wav", 10)),
+                         "Shouldn't work")
+        self.assertEqual(Status.OK, Solution.addDiskAndFile(Disk(1, "DELL", 10, 11, 12), File(1, "wav", 10)),
+                         "Should work")
+        self.assertEqual(Status.OK, Solution.addFileToDisk(File(1, "wav", 10), 1), "Should work")
+        self.assertEqual(1, Solution.getDiskByID(1).getFreeSpace(), "Should work")
+        self.assertEqual(Status.OK, Solution.removeFileFromDisk(File(1, "wav", 10), 1), "Should work")
+        self.assertEqual(11, Solution.getDiskByID(1).getFreeSpace(), "Should work")
+        self.assertEqual(Status.OK, Solution.removeFileFromDisk(File(11, "wav", 10), 1), "Should work")
+        self.assertEqual(Status.OK, Solution.removeFileFromDisk(File(1, "wav", 10), 11), "Should work")
+
+    def test_BasicApi_RamsOnDisks(self) -> None:
+        self.assertEqual(Status.OK, Solution.addRAM(RAM(2, "Kingston", 10)), "Should work")
+        self.assertEqual(Status.OK, Solution.addDisk(Disk(1, "DELL", 10, 11, 12)), "Should work")
+        self.assertEqual(Status.OK, Solution.addRAMToDisk(2, 1), "Should work")
+        self.assertEqual(Status.NOT_EXISTS, Solution.addRAMToDisk(9, 1), "Shouldn't work")
+        self.assertEqual(Status.OK, Solution.removeRAMFromDisk(2, 1), "Should work")
+        self.assertEqual(Status.NOT_EXISTS, Solution.removeRAMFromDisk(9, 1), "Shouldn't work")
+
+
 
 # *** DO NOT RUN EACH TEST MANUALLY ***
 if __name__ == '__main__':

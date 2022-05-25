@@ -317,10 +317,17 @@ def addDiskAndFile(disk: Disk, file: File) -> Status:
                         f"{add_file} "
                         f"COMMIT;")
         conn.execute(query)
+        conn.commit()
     except DatabaseException.UNIQUE_VIOLATION:
         conn.rollback()
         return Status.ALREADY_EXISTS
-    except DatabaseException:
+    except DatabaseException.CHECK_VIOLATION:
+        conn.rollback()
+        return Status.ERROR
+    except DatabaseException.NOT_NULL_VIOLATION:
+        conn.rollback()
+        return Status.ERROR
+    except DatabaseException.ConnectionInvalid:
         conn.rollback()
         return Status.ERROR
     finally:
@@ -330,18 +337,96 @@ def addDiskAndFile(disk: Disk, file: File) -> Status:
 
 
 def addFileToDisk(file: File, diskID: int) -> Status:
+    conn = None
+    FilesOnDisks = f"INSERT INTO FilesOnDisks VALUES ({diskID},{file.getFileID()});"
+    updateFreeSpace = f"UPDATE Disks SET FreeSpace = FreeSpace - {file.getSize()} WHERE DiskId = {diskID};"
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL(f"BEGIN; "
+                        f"{FilesOnDisks} "
+                        f"{updateFreeSpace} "
+                        f"COMMIT;")
+        conn.execute(query)
+        conn.commit()
+    except DatabaseException.FOREIGN_KEY_VIOLATION:
+        conn.rollback()
+        return Status.NOT_EXISTS
+    except DatabaseException.UNIQUE_VIOLATION:
+        conn.rollback()
+        return Status.ALREADY_EXISTS
+    except DatabaseException.CHECK_VIOLATION:
+        conn.rollback()
+        return Status.BAD_PARAMS
+    except DatabaseException.ConnectionInvalid:
+        conn.rollback()
+        return Status.ERROR
+    finally:
+        if conn:
+            conn.close()
     return Status.OK
 
 
 def removeFileFromDisk(file: File, diskID: int) -> Status:
+    conn = None
+    updateFreeSpace = f"UPDATE Disks SET FreeSpace = FreeSpace + {file.getSize()} " \
+                              f"WHERE DiskId = {diskID} AND EXISTS (SELECT * FROM FilesOnDisks WHERE " \
+                              f"FileId = {file.getFileID()} AND DiskId = {diskID});"
+    deleteFileFromDisk = f"DELETE FROM FilesOnDisks WHERE FileId = {file.getFileID()} AND DiskId = {diskID};"
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL(f"BEGIN; "
+                        f"{updateFreeSpace} "
+                        f"{deleteFileFromDisk} "
+                        f"COMMIT;")
+        conn.execute(query)
+        conn.commit()
+    except DatabaseException:
+        conn.rollback()
+        return Status.ERROR
+    finally:
+        if conn:
+            conn.close()
     return Status.OK
 
 
 def addRAMToDisk(ramID: int, diskID: int) -> Status:
+    conn = None
+    try:
+        RamsOnDisks = f"INSERT INTO RamsOnDisks VALUES ({diskID},{ramID});"
+        conn = Connector.DBConnector()
+        query = sql.SQL(f"{RamsOnDisks}")
+        conn.execute(query)
+        conn.commit()
+    except DatabaseException.FOREIGN_KEY_VIOLATION:
+        conn.rollback()
+        return Status.NOT_EXISTS
+    except DatabaseException.UNIQUE_VIOLATION:
+        conn.rollback()
+        return Status.ALREADY_EXISTS
+    except DatabaseException.ConnectionInvalid:
+        conn.rollback()
+        return Status.ERROR
+    finally:
+        if conn:
+            conn.close()
     return Status.OK
 
 
 def removeRAMFromDisk(ramID: int, diskID: int) -> Status:
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL(f"DELETE FROM RamsOnDisks WHERE RamId = {ramID} AND DiskId = {diskID};")
+        rows_effected, _ = conn.execute(query)
+        conn.commit()
+    except DatabaseException:
+        conn.rollback()
+        return Status.ERROR
+    finally:
+        if conn:
+            conn.close()
+    if rows_effected == 0:
+        return Status.NOT_EXISTS
     return Status.OK
 
 
