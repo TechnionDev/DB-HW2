@@ -92,25 +92,10 @@ def clearTables():
 
 def dropTables():
     conn = None
+    # return  # TODO: Remove this
     try:
         conn = Connector.DBConnector()
-        clearFiles = "DROP TABLE Files CASCADE;"
-
-        clearDisks = "DROP TABLE Disks CASCADE;"
-
-        clearRams = "DROP TABLE Rams CASCADE;"
-
-        clearFilesOnDisks = "DROP TABLE FilesOnDisks;"
-
-        clearRamsOnDisks = "DROP TABLE RamsOnDisks;"
-
-        query = sql.SQL(f"BEGIN; "
-                        f"{clearFiles}"
-                        f"{clearDisks}"
-                        f"{clearRams}"
-                        f"{clearFilesOnDisks}"
-                        f"{clearRamsOnDisks}"
-                        f"COMMIT;")
+        query = sql.SQL("DROP TABLE Files, Disks, Rams, FilesOnDisks, RamsOnDisks CASCADE;")
         conn.execute(query)
         conn.commit()
     except DatabaseException as e:
@@ -369,8 +354,8 @@ def addFileToDisk(file: File, diskID: int) -> Status:
 def removeFileFromDisk(file: File, diskID: int) -> Status:
     conn = None
     updateFreeSpace = f"UPDATE Disks SET FreeSpace = FreeSpace + {file.getSize()} " \
-                              f"WHERE DiskId = {diskID} AND EXISTS (SELECT * FROM FilesOnDisks WHERE " \
-                              f"FileId = {file.getFileID()} AND DiskId = {diskID});"
+                      f"WHERE DiskId = {diskID} AND EXISTS (SELECT * FROM FilesOnDisks WHERE " \
+                      f"FileId = {file.getFileID()} AND DiskId = {diskID});"
     deleteFileFromDisk = f"DELETE FROM FilesOnDisks WHERE FileId = {file.getFileID()} AND DiskId = {diskID};"
     try:
         conn = Connector.DBConnector()
@@ -431,19 +416,82 @@ def removeRAMFromDisk(ramID: int, diskID: int) -> Status:
 
 
 def averageFileSizeOnDisk(diskID: int) -> float:
-    return 0
+    query = sql.SQL(f'SELECT AVG(DiskSizeNeeded) FROM Files f JOIN FilesOnDisks fod ON f.FileID = fod.FileID '
+                    f'WHERE fod.DiskID = {diskID};')
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        _, result = conn.execute(query)
+        conn.commit()
+    except Exception:
+        return -1
+    finally:
+        if conn:
+            conn.close()
+    if result.isEmpty():
+        return 0
+    return result[0]['avg'] or 0
 
 
 def diskTotalRAM(diskID: int) -> int:
-    return 0
+    query = sql.SQL(f'SELECT SUM(Size) FROM Rams r JOIN RamsOnDisks rod ON r.RamID = rod.RamID '
+                    f'WHERE rod.DiskID = {diskID};')
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        _, result = conn.execute(query)
+        conn.commit()
+    except Exception:
+        return -1
+    finally:
+        if conn:
+            conn.close()
+    if result.isEmpty():
+        return 0
+    return result[0]['sum'] or 0
+
+
+def totalRAMOnDisk(diskID: int) -> int:
+    return diskTotalRAM(diskID)
 
 
 def getCostForType(type: str) -> int:
-    return 0
+    query = sql.SQL(f'SELECT SUM(DiskSizeNeeded * CostPerByte) FROM Files JOIN Disks ON Type = \'{type}\';')
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        _, result = conn.execute(query)
+        conn.commit()
+    except Exception:
+        return -1
+    finally:
+        if conn:
+            conn.close()
+    if result.isEmpty():
+        return 0
+    return result[0]['sum'] or 0
 
 
 def getFilesCanBeAddedToDisk(diskID: int) -> List[int]:
-    return []
+    """
+    Returns a list (max size is 5) of files' IDs that can be added to the disk with diskID as singles - not all together (even if they're on the disk).
+    The list is sorted by fileIDs in descending order.
+    """
+    query = sql.SQL(f"""SELECT f.FileID FROM Files f
+                            WHERE NOT EXISTS (SELECT fod.FileID FROM FilesOnDisks fod WHERE fod.DiskID = {diskID} AND f.FileID = fod.FileID) 
+	                            AND EXISTS (SELECT d.DiskID FROM Disks d WHERE d.DiskID = {diskID} AND f.DiskSizeNeeded <= d.FreeSpace )
+                            ORDER BY f.FileID DESC
+                            LIMIT 5""")
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        _, result = conn.execute(query)
+        conn.commit()
+    except Exception as e:
+        return []
+
+    result = [x[0] for x in result.rows]
+    return result
 
 
 def getFilesCanBeAddedToDiskAndRAM(diskID: int) -> List[int]:
