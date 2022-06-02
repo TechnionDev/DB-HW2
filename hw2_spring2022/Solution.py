@@ -59,7 +59,7 @@ def createTables():
                                 JOIN Files f2 ON f1 != f2;"""
 
         createCommonDisksForFilePairsView = """CREATE VIEW FilePairsCommonDisks AS
-                                                SELECT fid1, fid2, COUNT(ff.DiskId) CommonDisks from FilePairs fp 
+                                                SELECT fid1, fid2, COUNT(ff.DiskId) CommonDisks from FilePairs fp
                                                     LEFT JOIN (SELECT fod1.FileId fodfid1, fod2.FileId fodfid2, fod1.DiskId
                                                                 FROM FilesOnDisks fod1
                                                                 JOIN FilesOnDisks fod2
@@ -125,9 +125,7 @@ def dropTables():
     conn = None
     try:
         conn = Connector.DBConnector()
-        query = sql.SQL("""BEGIN;
-                            DROP TABLE Files, Disks, Rams, FilesOnDisks, RamsOnDisks CASCADE;
-                            COMMIT;""")
+        query = sql.SQL("""DROP TABLE Files, Disks, Rams, FilesOnDisks, RamsOnDisks CASCADE""")
         conn.execute(query)
         conn.commit()
     except Exception as e:
@@ -491,8 +489,8 @@ def totalRAMOnDisk(diskID: int) -> int:
 
 def getCostForType(type: str) -> int:
     query = sql.SQL(
-        f"""SELECT SUM(DiskSizeNeeded * CostPerByte) 
-            FROM Files f 
+        f"""SELECT SUM(DiskSizeNeeded * CostPerByte)
+            FROM Files f
             JOIN Disks d ON Type = '{type}'
             JOIN FilesOnDisks fod ON f.FileId = fod.FileId AND fod.DiskId = d.DiskId;""")
     conn = None
@@ -584,8 +582,8 @@ def getConflictingDisks() -> List[int]:
     """
 
     query = sql.SQL(f"""SELECT DISTINCT d.DiskId FROM Disks d
-                            WHERE EXISTS (SELECT fod2.DiskId FROM FilesOnDisks fod2 
-                                            WHERE fod2.DiskId != d.DiskId 
+                            WHERE EXISTS (SELECT fod2.DiskId FROM FilesOnDisks fod2
+                                            WHERE fod2.DiskId != d.DiskId
                                             AND fod2.fileId IN (SELECT fod.FileId FROM FilesOnDisks fod
                                                                 WHERE fod.DiskId = d.DiskId))
                             ORDER BY d.DiskId ASC""")
@@ -624,7 +622,7 @@ def getCloseFiles(fileID: int) -> List[int]:
     """
     Returns a list of files that are on at least 50% of the disks that the given file is on (limit of 10)
     """
-    query = sql.SQL(f"""SELECT fid2 FROM FilePairsCommonDisks 
+    query = sql.SQL(f"""SELECT fid2 FROM FilePairsCommonDisks
                         WHERE fid1 = {fileID}
                             AND CommonDisks*2 >= (SELECT Disks FROM DiskCountPerFile WHERE FileId = {fileID})
                         ORDER BY CommonDisks DESC, fid2 ASC LIMIT 10""")
