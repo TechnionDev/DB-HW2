@@ -561,7 +561,6 @@ def getConflictingDisks() -> List[int]:
         conn = Connector.DBConnector()
         _, result = conn.execute(query)
     except Exception as e:
-        print(e)
         return []
 
     result = [x[0] for x in result.rows]
