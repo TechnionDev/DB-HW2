@@ -27,4 +27,5 @@ class RAM:
         return RAM()
 
     def __str__(self):
-        print("RamID=" + str(self.__ramID) + ", company=" + str(self.__company) + ", size=" + str(self.__size))
+        print("RamID=" + str(self.__ramID) + ", company=" +
+              str(self.__company) + ", size=" + str(self.__size))

@@ -7,3 +7,5 @@
 # Editor-based HTTP Client requests
 /httpRequests/
 ../Utility/database.ini
+__pycache__/
+.DS_Store

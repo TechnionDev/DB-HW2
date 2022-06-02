@@ -1,0 +1,21 @@
+{
+    "github.copilot.enable": {
+        "*": true,
+        "yaml": false,
+        "plaintext": false,
+        "markdown": false
+    },
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "./Tests",
+        "-p",
+        "*Test.py"
+    ],
+    "python.defaultInterpreterPath": "${workspaceFolder}/hw2_spring2022/venv/bin/python",
+    "python.envFile": "${workspaceFolder}/hw2_spring2022/venv/pyvenv.cfg",
+    // "python.pipenvPath": "${workspaceFolder}/venv/bin/activate",
+    "python.testing.cwd": "./hw2_spring2022/",
+    "python.testing.pytestEnabled": false,
+    "python.testing.unittestEnabled": true
+}

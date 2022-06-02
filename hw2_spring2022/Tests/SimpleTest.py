@@ -34,6 +34,44 @@ class Test(AbstractTest):
         self.assertEqual(Status.ALREADY_EXISTS, Solution.addFile(File(3, "wav", 10)),
                          "ID 3 already exists")
 
+    def test_CloseFiles(self) -> None:
+        files = [
+            File(fileID=1, type="xml", size=10),
+            *[File(fileID=i, type="rst", size=10) for i in range(2, 15)],
+        ]
+        disks = [
+            Disk(diskID=i, brand="DELL", speed=100*i+i, cost=10+i, free_space=1000*i) for i in range(1,21)
+        ]
+
+        for i, file in enumerate(files):
+            self.assertEqual(Status.OK, Solution.addFile(file), "Should work")
+        for i, disk in enumerate(files):
+            self.assertEqual(Status.OK, Solution.addDisk(disk), "Should work")
+
+        # Add fileId 1 to disks 1-9
+        for i in range(9):
+            self.assertEqual(Status.OK, Solution.addFileToDisk(1, disks[i].getDiskID()), "Should work")
+
+        # Add fileId 2 to disks 4-6
+        for i in range(3, 6):
+            self.assertEqual(Status.OK, Solution.addFileToDisk(2, disks[i].getDiskID()), "Should work")
+
+        # Add fileId 3 to disks 3-6
+        for i in range(2, 6):
+            self.assertEqual(Status.OK, Solution.addFileToDisk(3, disks[i].getDiskID()), "Should work")
+        
+        # Add fileId 4 to disks 2-6
+        for i in range(1, 6):
+            self.assertEqual(Status.OK, Solution.addFileToDisk(4, disks[i].getDiskID()), "Should work")
+        
+        # Add fileId 5 to disks 6-10
+        for i in range(5, 10):
+            self.assertEqual(Status.OK, Solution.addFileToDisk(5, disks[i].getDiskID()), "Should work")
+
+        # Get list of closest files
+        self.assertEqual([], Solution.closeFiles(files[0].getFileID()), "Should work")
+        self.assertEqual([15, 14, 13, 12, 11, 10, 9, 8, 7, 6]
+        ], Solution.closeFiles(files[5].getFileID()), "Should work")
 
 # *** DO NOT RUN EACH TEST MANUALLY ***
 if __name__ == '__main__':
