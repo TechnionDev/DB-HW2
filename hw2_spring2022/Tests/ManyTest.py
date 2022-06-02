@@ -647,7 +647,7 @@ class FromGroupTest(AbstractTest):
             (file1.getSize() + file2.getSize() + file3.getSize()) * num_f_disks
         self.assertEqual(expected, result)
 
-    def test_getCostForType_type_note_exists(self):
+    def test_getCostForType_type_doesnt_exists(self):
         """
 
         :return:

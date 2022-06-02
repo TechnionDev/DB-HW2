@@ -15,20 +15,20 @@ def createTables():
         createFiles = "CREATE TABLE Files(FileId INTEGER PRIMARY KEY NOT NULL," \
                       "Type TEXT NOT NULL," \
                       "DiskSizeNeeded INTEGER NOT NULL, " \
-                      "CHECK ( FileId >0 AND DiskSizeNeeded >=0));"
+                      "CHECK (FileId >0 AND DiskSizeNeeded >=0));"
 
         createDisks = "CREATE TABLE Disks(DiskId INTEGER PRIMARY KEY NOT NULL," \
                       "ManufacturingCompany TEXT NOT NULL," \
                       "Speed INTEGER NOT NULL," \
                       "FreeSpace INTEGER NOT NULL," \
                       "CostPerByte INTEGER NOT NULL, " \
-                      "CHECK ( DiskId>0 AND Speed>0 AND CostPerByte>0 AND FreeSpace>=0));"
+                      "CHECK (DiskId>0 AND Speed>0 AND CostPerByte>0 AND FreeSpace>=0));"
 
         createRams = "CREATE TABLE Rams(" \
                      "RamId INTEGER PRIMARY KEY NOT NULL," \
                      "Size INTEGER NOT NULL," \
                      "Company TEXT NOT NULL," \
-                     "CHECK ( RamId >0 AND Size>0 ));"
+                     "CHECK (RamId >0 AND Size>0));"
 
         createFilesOnDisks = "CREATE TABLE FilesOnDisks(DiskId INTEGER NOT NULL," \
                              "FileId INTEGER NOT NULL," \
@@ -41,6 +41,13 @@ def createTables():
                             "FOREIGN KEY (DiskId) REFERENCES Disks(DiskId) ON DELETE CASCADE," \
                             "FOREIGN KEY (RamId) REFERENCES Rams(RamId) ON DELETE CASCADE," \
                             "UNIQUE(DiskId,RamId));"
+
+        createTotalRamForDiskView = """CREATE VIEW TotalRAMForDisk AS
+                                            SELECT DiskId, SUM(r.Size) TotalRam
+                                            FROM Rams r
+                                            JOIN RamsOnDisks rod
+                                            ON r.RamId = rod.RamId
+                                            GROUP BY DiskId;"""
 
         createDiskCountPerFileView = """CREATE VIEW DiskCountPerFile AS
                                             SELECT DISTINCT f.FileId, COUNT(DiskId) Disks FROM Files f
@@ -67,6 +74,7 @@ def createTables():
                         f"{createRams}"
                         f"{createFilesOnDisks}"
                         f"{createRamsOnDisks}"
+                        f"{createTotalRamForDiskView}"
                         f"{createDiskCountPerFileView}"
                         f"{createFilePairsView}"
                         f"{createCommonDisksForFilePairsView}"
@@ -178,7 +186,10 @@ def deleteFile(file: File) -> Status:
     conn = None
     try:
         conn = Connector.DBConnector()
-        query = sql.SQL("DELETE FROM Files WHERE FileId = {FileId} AND Type={Type} AND DiskSizeNeeded={Size}").format(
+        query = sql.SQL("""BEGIN;
+                        UPDATE Disks SET FreeSpace = FreeSpace + {Size} WHERE EXISTS (SELECT * FROM FilesOnDisks fod WHERE fod.FileId = {FileId} AND fod.DiskId = Disks.DiskId);
+                        DELETE FROM Files WHERE FileId = {FileId} AND Type={Type} AND DiskSizeNeeded={Size};
+                        COMMIT;""").format(
             FileId=sql.Literal(file.getFileID()),
             Type=sql.Literal(file.getType()),
             Size=sql.Literal(file.getSize()))
@@ -387,7 +398,7 @@ def removeFileFromDisk(file: File, diskID: int) -> Status:
                         f"COMMIT;")
         conn.execute(query)
         conn.commit()
-    except DatabaseException:
+    except Exception:
         conn.rollback()
         return Status.ERROR
     finally:
@@ -453,7 +464,7 @@ def averageFileSizeOnDisk(diskID: int) -> float:
             conn.close()
     if result.isEmpty():
         return 0
-    return result[0]['avg'] or 0
+    return float(result[0]['avg'] or 0)
 
 
 def diskTotalRAM(diskID: int) -> int:
@@ -471,7 +482,7 @@ def diskTotalRAM(diskID: int) -> int:
             conn.close()
     if result.isEmpty():
         return 0
-    return result[0]['sum'] or 0
+    return int(result[0]['sum'] or 0)
 
 
 def totalRAMOnDisk(diskID: int) -> int:
@@ -480,7 +491,10 @@ def totalRAMOnDisk(diskID: int) -> int:
 
 def getCostForType(type: str) -> int:
     query = sql.SQL(
-        f'SELECT SUM(DiskSizeNeeded * CostPerByte) FROM Files JOIN Disks ON Type = \'{type}\';')
+        f"""SELECT SUM(DiskSizeNeeded * CostPerByte) 
+            FROM Files f 
+            JOIN Disks d ON Type = '{type}'
+            JOIN FilesOnDisks fod ON f.FileId = fod.FileId AND fod.DiskId = d.DiskId;""")
     conn = None
     try:
         conn = Connector.DBConnector()
@@ -493,7 +507,7 @@ def getCostForType(type: str) -> int:
             conn.close()
     if result.isEmpty():
         return 0
-    return result[0]['sum'] or 0
+    return int(result[0]['sum'] or 0)
 
 
 def getFilesCanBeAddedToDisk(diskID: int) -> List[int]:
@@ -527,7 +541,8 @@ def getFilesCanBeAddedToDiskAndRAM(diskID: int) -> List[int]:
     """
     query = sql.SQL(f"""SELECT f.FileId FROM Files f
                             WHERE EXISTS (SELECT d.DiskId FROM Disks d WHERE d.DiskId = {diskID} AND f.DiskSizeNeeded <= d.FreeSpace)
-                            AND (SELECT SUM(r.Size) FROM Rams r JOIN RamsOnDisks rod ON r.RamId = rod.RamId WHERE rod.DiskId = {diskID}) >= f.DiskSizeNeeded
+                            AND ((SELECT TotalRam FROM TotalRAMForDisk trd WHERE trd.DiskId = {diskID}) >= f.DiskSizeNeeded
+                                    OR f.DiskSizeNeeded = 0)
                             ORDER BY f.FileId ASC
                             LIMIT 5""")
     conn = None
