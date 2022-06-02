@@ -93,7 +93,6 @@ def clearTables():
 
 def dropTables():
     conn = None
-    return  # TODO: Remove this
     try:
         conn = Connector.DBConnector()
         query = sql.SQL(
@@ -167,8 +166,6 @@ def deleteFile(file: File) -> Status:
     finally:
         if conn:
             conn.close()
-    if rows_effected == 0:
-        return Status.ERROR
     return Status.OK
 
 
@@ -557,13 +554,14 @@ def getConflictingDisks() -> List[int]:
                             WHERE EXISTS (SELECT fod2.DiskId FROM FilesOnDisks fod2 
                                             WHERE fod2.DiskId != d.DiskId 
                                             AND fod2.fileId IN (SELECT fod.FileId FROM FilesOnDisks fod
-                                                                WHERE fod.DiskId == d.DiskId))
+                                                                WHERE fod.DiskId = d.DiskId))
                             ORDER BY d.DiskId ASC""")
     conn = None
     try:
         conn = Connector.DBConnector()
         _, result = conn.execute(query)
     except Exception as e:
+        print(e)
         return []
 
     result = [x[0] for x in result.rows]
