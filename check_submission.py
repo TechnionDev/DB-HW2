@@ -14,7 +14,7 @@ if __name__ == '__main__':
         print('Must be ID1-ID2.zip')
         exit(1)
     if len(id1) != 9 or len(id2) != 9:
-        print('IDs must be 9 digits')
+        print(f'IDs must be 9 digits: {len(id1)=} {len(id2)=}')
         exit(1)
     with zipfile.ZipFile(zip_file, 'r') as zip_ref:
         list_Of_files = zip_ref.namelist()
