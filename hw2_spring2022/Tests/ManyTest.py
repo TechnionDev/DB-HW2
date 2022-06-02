@@ -11,26 +11,35 @@ from Business.Disk import Disk
 '''
 
 
-class Test(AbstractTest):
+class FromGroupTest(AbstractTest):
     ########################################### addFile, addDisk, addRAM #############################################
     def test_add_File(self) -> None:
-        self.assertEqual(Status.OK, Solution.addFile(File(1, "wav", 10)), "Should work")
-        self.assertEqual(Status.OK, Solution.addFile(File(2, "wav", 10)), "Should work")
-        self.assertEqual(Status.OK, Solution.addFile(File(3, "wav", 10)), "Should work")
+        self.assertEqual(Status.OK, Solution.addFile(
+            File(1, "wav", 10)), "Should work")
+        self.assertEqual(Status.OK, Solution.addFile(
+            File(2, "wav", 10)), "Should work")
+        self.assertEqual(Status.OK, Solution.addFile(
+            File(3, "wav", 10)), "Should work")
         self.assertEqual(Status.ALREADY_EXISTS, Solution.addFile(File(3, "wav", 10)),
                          "ID 3 already exists")
 
     def test_Disk(self) -> None:
-        self.assertEqual(Status.OK, Solution.addDisk(Disk(1, "DELL", 10, 10, 10)), "Should work1")
-        self.assertEqual(Status.OK, Solution.addDisk(Disk(2, "DELL", 10, 10, 10)), "Should work2")
-        self.assertEqual(Status.OK, Solution.addDisk(Disk(3, "DELL", 10, 10, 10)), "Should work3")
+        self.assertEqual(Status.OK, Solution.addDisk(
+            Disk(1, "DELL", 10, 10, 10)), "Should work1")
+        self.assertEqual(Status.OK, Solution.addDisk(
+            Disk(2, "DELL", 10, 10, 10)), "Should work2")
+        self.assertEqual(Status.OK, Solution.addDisk(
+            Disk(3, "DELL", 10, 10, 10)), "Should work3")
         self.assertEqual(Status.ALREADY_EXISTS, Solution.addDisk(Disk(1, "DELL", 10, 10, 10)),
                          "ID 1 already exists")
 
     def test_RAM(self) -> None:
-        self.assertEqual(Status.OK, Solution.addRAM(RAM(1, "Kingston", 10)), "Should work")
-        self.assertEqual(Status.OK, Solution.addRAM(RAM(2, "Kingston", 10)), "Should work")
-        self.assertEqual(Status.OK, Solution.addRAM(RAM(3, "Kingston", 10)), "Should work")
+        self.assertEqual(Status.OK, Solution.addRAM(
+            RAM(1, "Kingston", 10)), "Should work")
+        self.assertEqual(Status.OK, Solution.addRAM(
+            RAM(2, "Kingston", 10)), "Should work")
+        self.assertEqual(Status.OK, Solution.addRAM(
+            RAM(3, "Kingston", 10)), "Should work")
         self.assertEqual(Status.ALREADY_EXISTS, Solution.addRAM(RAM(2, "Kingston", 10)),
                          "ID 2 already exists")
 
@@ -71,9 +80,12 @@ class Test(AbstractTest):
         file1 = File(1, "wav", 10)
         Solution.addFile(file1)
         file2 = Solution.getFileByID(file1.getFileID())
-        self.assertEqual(file1.getFileID(), file2.getFileID(), "sanity check - id")
-        self.assertEqual(file1.getSize(), file2.getSize(), "sanity check - size")
-        self.assertEqual(file1.getType(), file2.getType(), "sanity check - type")
+        self.assertEqual(file1.getFileID(), file2.getFileID(),
+                         "sanity check - id")
+        self.assertEqual(file1.getSize(), file2.getSize(),
+                         "sanity check - size")
+        self.assertEqual(file1.getType(), file2.getType(),
+                         "sanity check - type")
         Solution.deleteFile(file1)
         res = Solution.getFileByID(1)
 
@@ -103,7 +115,8 @@ class Test(AbstractTest):
         Solution.addFileToDisk(file1, disk1.getDiskID())
         Solution.deleteFile(file1)
         new_size_disk = disk1.getFreeSpace()
-        self.assertEqual(first_size_disk, new_size_disk, "checking size of disk")
+        self.assertEqual(first_size_disk, new_size_disk,
+                         "checking size of disk")
 
     def test_deleteFile_check_disk_size_with_2_disks(self):
         """
@@ -124,8 +137,10 @@ class Test(AbstractTest):
         new_size_disk1 = disk1.getFreeSpace()
         new_size_disk2 = disk2.getFreeSpace()
 
-        self.assertEqual(first_size_disk1, new_size_disk1, "checking size of disk")
-        self.assertEqual(first_size_disk2, new_size_disk2, "checking size of disk")
+        self.assertEqual(first_size_disk1, new_size_disk1,
+                         "checking size of disk")
+        self.assertEqual(first_size_disk2, new_size_disk2,
+                         "checking size of disk")
 
     ################################################# deleteDisk #####################################################
     def test_deleteDisk_regular_case(self):
@@ -165,9 +180,12 @@ class Test(AbstractTest):
         Solution.deleteDisk(disk1.getDiskID())
 
         file2 = Solution.getFileByID(file1.getFileID())
-        self.assertEqual(file1.getFileID(), file2.getFileID(), "sanity check - id")
-        self.assertEqual(file1.getSize(), file2.getSize(), "sanity check - size")
-        self.assertEqual(file1.getType(), file2.getType(), "sanity check - type")
+        self.assertEqual(file1.getFileID(), file2.getFileID(),
+                         "sanity check - id")
+        self.assertEqual(file1.getSize(), file2.getSize(),
+                         "sanity check - size")
+        self.assertEqual(file1.getType(), file2.getType(),
+                         "sanity check - type")
 
     ################################################# addDiskAndFile ##################################################
     def test_addDiskAndFile(self):
@@ -235,7 +253,8 @@ class Test(AbstractTest):
         Solution.addDisk(disk1)
         Solution.addFile(file1)
         result = Solution.addFileToDisk(file1, disk1.getDiskID())
-        new_space_disk1 = Solution.getDiskByID(disk1.getDiskID()).getFreeSpace()
+        new_space_disk1 = Solution.getDiskByID(
+            disk1.getDiskID()).getFreeSpace()
         expected_new_space = disk1.getFreeSpace() - file1.getSize()
         self.assertEqual(new_space_disk1, expected_new_space)
         self.assertEqual(Status.OK, result, "Should be ok")
@@ -290,7 +309,8 @@ class Test(AbstractTest):
         Solution.addDisk(disk1)
         Solution.addFile(file1)
         result = Solution.addFileToDisk(file1, disk1.getDiskID())
-        self.assertEqual(Status.BAD_PARAMS, result, "file space larger than disk space")
+        self.assertEqual(Status.BAD_PARAMS, result,
+                         "file space larger than disk space")
 
         ########################################### addRAMToDisk ###############################################
 
@@ -357,11 +377,14 @@ class Test(AbstractTest):
         new_space_disk = Solution.getDiskByID(disk1.getDiskID()).getFreeSpace()
 
         # sanity check
-        self.assertEqual(new_space_disk, disk1.getFreeSpace() - file1.getSize(), "check adding")
+        self.assertEqual(new_space_disk, disk1.getFreeSpace() -
+                         file1.getSize(), "check adding")
 
         result = Solution.removeFileFromDisk(file1, disk1.getDiskID())
-        new_space_disk_tag = Solution.getDiskByID(disk1.getDiskID()).getFreeSpace()
-        self.assertEqual(new_space_disk_tag, first_free_space_disk1, "check removing")
+        new_space_disk_tag = Solution.getDiskByID(
+            disk1.getDiskID()).getFreeSpace()
+        self.assertEqual(new_space_disk_tag,
+                         first_free_space_disk1, "check removing")
         self.assertEqual(Status.OK, result, "should be OK")
 
     def test_removeFileFromDisk_file_not_exists(self):
@@ -377,8 +400,10 @@ class Test(AbstractTest):
         self.assertEqual(Status.OK, result, "should be OK")
 
         # sanity check
-        new_space_disk_tag = Solution.getDiskByID(disk1.getDiskID()).getFreeSpace()
-        self.assertEqual(first_free_space_disk1, new_space_disk_tag, "checking free space doesnt change")
+        new_space_disk_tag = Solution.getDiskByID(
+            disk1.getDiskID()).getFreeSpace()
+        self.assertEqual(first_free_space_disk1, new_space_disk_tag,
+                         "checking free space doesnt change")
 
     def test_removeFileFromDisk_disk_not_exists(self):
         """
@@ -404,8 +429,10 @@ class Test(AbstractTest):
         result = Solution.removeFileFromDisk(file1, disk1.getDiskID())
         self.assertEqual(Status.OK, result, "should be OK")
         # sanity check
-        new_space_disk_tag = Solution.getDiskByID(disk1.getDiskID()).getFreeSpace()
-        self.assertEqual(first_free_space_disk1, new_space_disk_tag, "checking free space doesnt change")
+        new_space_disk_tag = Solution.getDiskByID(
+            disk1.getDiskID()).getFreeSpace()
+        self.assertEqual(first_free_space_disk1, new_space_disk_tag,
+                         "checking free space doesnt change")
 
     ########################################### removeRAMFromDisk ###############################################
 
@@ -571,7 +598,8 @@ class Test(AbstractTest):
             Solution.addRAM(rams[ram_id - 1])
 
         for ram_id in range(1, n + 1):
-            Solution.addRAMToDisk(rams[ram_id - 1].getRamID(), disk1.getDiskID())
+            Solution.addRAMToDisk(
+                rams[ram_id - 1].getRamID(), disk1.getDiskID())
 
         result = Solution.diskTotalRAM(disk1.getDiskID())
         expected = sum([i for i in range(1, n + 1)])
@@ -594,12 +622,15 @@ class Test(AbstractTest):
         :return:
         """
         disk1_CPR = 9
-        disk1 = Disk(1, "DELL", 10, 10000000, disk1_CPR)
-        disk2 = Disk(2, "DELL", 10, 10000000, disk1_CPR)
+        disk1 = Disk(diskID=1, company="DELL", speed=10,
+                     free_space=10000000, cost=disk1_CPR)
+        disk2 = Disk(diskID=2, company="DELL", speed=10,
+                     free_space=10000000, cost=disk1_CPR)
+        num_f_disks = 2
 
-        file1 = File(1, "A", 10)
-        file2 = File(2, "A", 15)
-        file3 = File(3, "A", 15)
+        file1 = File(fileID=1, type="A", size=10)
+        file2 = File(fileID=2, type="A", size=15)
+        file3 = File(fileID=3, type="A", size=15)
 
         Solution.addDisk(disk1)
         Solution.addDisk(disk2)
@@ -612,7 +643,8 @@ class Test(AbstractTest):
         Solution.addFileToDisk(file3, disk2.getDiskID())
 
         result = Solution.getCostForType("A")
-        expected = disk1_CPR * (file1.getSize() + file2.getSize() + file3.getSize())
+        expected = disk1_CPR * \
+            (file1.getSize() + file2.getSize() + file3.getSize()) * num_f_disks
         self.assertEqual(expected, result)
 
     def test_getCostForType_type_note_exists(self):
@@ -708,10 +740,11 @@ class Test(AbstractTest):
         :return:
         """
 
-        disk1 = Disk(1, "DELL", 10, 200, 10)
-        ram1 = RAM(1, "wav", 10)
-        ram2 = RAM(2, "wav", 20)
-        ram3 = RAM(3, "wav", 30)
+        disk1 = Disk(diskID=1, company="DELL",
+                     speed=10, free_space=200, cost=10)
+        ram1 = RAM(1, "wav", size=10)
+        ram2 = RAM(2, "wav", size=20)
+        ram3 = RAM(3, "wav", size=30)
         Solution.addDisk(disk1)
         Solution.addRAM(ram1)
         Solution.addRAM(ram2)
@@ -720,12 +753,12 @@ class Test(AbstractTest):
         Solution.addRAMToDisk(2, 1)
         Solution.addRAMToDisk(3, 1)
 
-        file1 = File(1, "wav", 10)
-        file2 = File(2, "wav", 20)
-        file3 = File(3, "wav", 30)
-        file4 = File(4, "wav", 40)
-        file5 = File(5, "wav", 100)
-        file6 = File(6, "wav", 100)
+        file1 = File(1, "wav", size=10)
+        file2 = File(2, "wav", size=20)
+        file3 = File(3, "wav", size=30)
+        file4 = File(4, "wav", size=40)
+        file5 = File(5, "wav", size=100)
+        file6 = File(6, "wav", size=100)
         files = [file1, file2, file3, file4, file5, file6]
         Solution.addFile(file1)
         Solution.addFile(file2)
@@ -736,8 +769,7 @@ class Test(AbstractTest):
         res = []
         res = Solution.getFilesCanBeAddedToDiskAndRAM(disk1.getDiskID())
         expected = [1, 2, 3, 4]
-        for i in range(4):
-            self.assertEqual(res[i], expected[i])
+        self.assertEqual(res, expected)
 
     def test_getFilesCanBeAddedToDiskAndRAM_case_disk_not_exists(self):
         """
@@ -927,10 +959,7 @@ class Test(AbstractTest):
         Solution.addFileToDisk(file5, 4)
 
         res = Solution.getConflictingDisks()
-        self.assertEqual(3, len(res))
-        self.assertEqual(3, res[2])
-        self.assertEqual(2, res[1])
-        self.assertEqual(1, res[0])
+        self.assertEqual([1, 2, 3], res)
 
     def test_getConflictingDisks_empty_list(self):
         """
@@ -1025,9 +1054,7 @@ class Test(AbstractTest):
         Solution.addFile(file6)
         res = Solution.mostAvailableDisks()
         expected = [4, 3, 2, 1]
-        self.assertEqual(len(expected), len(res))
-        for i in range(4):
-            self.assertEqual(res[i], expected[i])
+        self.assertEqual(expected, res)
 
     def test_mostAvailableDisks_regular_case1(self):
         disk1 = Disk(1, "DELL", 10, 70, 70)
@@ -1080,48 +1107,25 @@ class Test(AbstractTest):
         Solution.addDisk(disk1)
         Solution.addDisk(disk2)
         Solution.addDisk(disk3)
-        file1 = File(1, "wav", 10)
-        file2 = File(2, "wav", 20)
-        file3 = File(3, "wav", 30)
-        file4 = File(4, "wav", 40)
-        file5 = File(5, "wav", 50)
-        file6 = File(6, "wav", 60)
-        file7 = File(7, "wav", 10)
-        file8 = File(8, "wav", 20)
-        file9 = File(9, "wav", 30)
-        file10 = File(10, "wav", 40)
-        file11 = File(11, "wav", 50)
-        file12 = File(12, "wav", 60)
-
-        Solution.addFile(file1)
-        Solution.addFile(file2)
-        Solution.addFile(file3)
-        Solution.addFile(file4)
-        Solution.addFile(file5)
-        Solution.addFile(file6)
-        Solution.addFile(file7)
-        Solution.addFile(file8)
-        Solution.addFile(file9)
-        Solution.addFile(file10)
-        Solution.addFile(file11)
-        Solution.addFile(file12)
-
-        Solution.addFileToDisk(file1, 1)
-        Solution.addFileToDisk(file2, 1)
-        Solution.addFileToDisk(file3, 1)
-        Solution.addFileToDisk(file4, 1)
-        Solution.addFileToDisk(file5, 1)
-        Solution.addFileToDisk(file6, 1)
-        Solution.addFileToDisk(file7, 1)
-        Solution.addFileToDisk(file8, 1)
-        Solution.addFileToDisk(file9, 1)
-        Solution.addFileToDisk(file10, 1)
-        Solution.addFileToDisk(file11, 1)
-        Solution.addFileToDisk(file12, 1)
+        files = [File(1, "wav", 10),
+                 File(2, "wav", 20),
+                 File(3, "wav", 30),
+                 File(4, "wav", 40),
+                 File(5, "wav", 50),
+                 File(6, "wav", 60),
+                 File(7, "wav", 10),
+                 File(8, "wav", 20),
+                 File(9, "wav", 30),
+                 File(10, "wav", 40),
+                 File(11, "wav", 50),
+                 File(12, "wav", 60)]
+        for file in files[:-1]:
+            Solution.addFile(file)
+            Solution.addFileToDisk(file, 1)
 
         res = Solution.getCloseFiles(1)
-        expected = [i for i in range(2, 12)]
-        self.assertEqual(len(expected), len(res), "length")
+        expected = list(range(2, 12))
+        self.assertEqual(expected, res, f"Expected: {expected} Got: {res}")
         for i in range(len(expected)):
             self.assertEqual(expected[i], res[i])
 
@@ -1183,14 +1187,15 @@ class Test(AbstractTest):
 
         res = Solution.getCloseFiles(1)
         expected = [2, 3, 4]
-        self.assertEqual(len(expected), len(res), "length")
-        for i in range(len(expected)):
-            self.assertEqual(expected[i], res[i])
+        self.assertEqual(expected, res, f"Expected: {expected} Got: {res}")
 
     def test_temp(self):
-        self.assertEqual(Status.OK, Solution.addFile(File(23, "MP3", 10)), "Should work")
-        self.assertEqual(Status.OK, Solution.deleteFile(File(23, "MP3", 10)), "Should work")
-        self.assertEqual(Status.OK, Solution.addFile(File(23, "MP3", 5)), "Re-adding RAM 1")
+        self.assertEqual(Status.OK, Solution.addFile(
+            File(23, "MP3", 10)), "Should work")
+        self.assertEqual(Status.OK, Solution.deleteFile(
+            File(23, "MP3", 10)), "Should work")
+        self.assertEqual(Status.OK, Solution.addFile(
+            File(23, "MP3", 5)), "Re-adding RAM 1")
 
 # *** DO NOT RUN EACH TEST MANUALLY ***
 

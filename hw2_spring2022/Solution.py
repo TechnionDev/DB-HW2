@@ -42,12 +42,34 @@ def createTables():
                             "FOREIGN KEY (RamId) REFERENCES Rams(RamId) ON DELETE CASCADE," \
                             "UNIQUE(DiskId,RamId));"
 
+        createDiskCountPerFileView = """CREATE VIEW DiskCountPerFile AS
+                                            SELECT DISTINCT f.FileId, COUNT(DiskId) Disks FROM Files f
+                                                LEFT JOIN FilesOnDisks fod ON f.FileId = fod.FileId
+                                                GROUP BY f.FileId;"""
+
+        createFilePairsView = """CREATE VIEW FilePairs AS
+                            SELECT f1.fileid fid1, f2.fileid fid2 FROM Files f1
+                                JOIN Files f2 ON f1 != f2;"""
+
+        createCommonDisksForFilePairsView = """CREATE VIEW FilePairsCommonDisks AS
+                                                SELECT fid1, fid2, COUNT(ff.DiskId) CommonDisks from FilePairs fp 
+                                                    LEFT JOIN (SELECT fod1.FileId fodfid1, fod2.FileId fodfid2, fod1.DiskId
+                                                                FROM FilesOnDisks fod1
+                                                                JOIN FilesOnDisks fod2
+                                                                    ON fod1.DiskId = fod2.DiskId)
+                                                                AS ff
+                                                    ON fodfid1 = fid1 AND fodfid2 = fid2
+                                                GROUP BY fid1, fid2;"""
+
         query = sql.SQL(f"BEGIN; "
                         f"{createFiles}"
                         f"{createDisks}"
                         f"{createRams}"
                         f"{createFilesOnDisks}"
                         f"{createRamsOnDisks}"
+                        f"{createDiskCountPerFileView}"
+                        f"{createFilePairsView}"
+                        f"{createCommonDisksForFilePairsView}"
                         f"COMMIT;")
         conn.execute(query)
         conn.commit()
@@ -83,7 +105,7 @@ def clearTables():
                         f"COMMIT;")
         conn.execute(query)
         conn.commit()
-    except DatabaseException as e:
+    except Exception as e:
         return Status.ERROR
     finally:
         if conn:
@@ -95,11 +117,13 @@ def dropTables():
     conn = None
     try:
         conn = Connector.DBConnector()
-        query = sql.SQL(
-            "DROP TABLE Files, Disks, Rams, FilesOnDisks, RamsOnDisks CASCADE;")
+        query = sql.SQL("""BEGIN;
+                            DROP TABLE Files, Disks, Rams, FilesOnDisks, RamsOnDisks CASCADE;
+                            COMMIT;""")
         conn.execute(query)
         conn.commit()
-    except DatabaseException as e:
+    except Exception as e:
+        conn.rollback()
         return Status.ERROR
     finally:
         if conn:
@@ -161,7 +185,7 @@ def deleteFile(file: File) -> Status:
 
         rows_effected, _ = conn.execute(query)
         conn.commit()
-    except DatabaseException as e:
+    except Exception as e:
         return Status.ERROR
     finally:
         if conn:
@@ -223,7 +247,7 @@ def deleteDisk(diskID: int) -> Status:
             diskID=sql.Literal(diskID))
         rows_effected, _ = conn.execute(query)
         conn.commit()
-    except DatabaseException as e:
+    except Exception as e:
         return Status.ERROR
     finally:
         if conn:
@@ -284,7 +308,7 @@ def deleteRAM(ramID: int) -> Status:
             ramID=sql.Literal(ramID))
         rows_effected, _ = conn.execute(query)
         conn.commit()
-    except DatabaseException as e:
+    except Exception as e:
         return Status.ERROR
     finally:
         if conn:
@@ -310,13 +334,7 @@ def addDiskAndFile(disk: Disk, file: File) -> Status:
     except DatabaseException.UNIQUE_VIOLATION:
         conn.rollback()
         return Status.ALREADY_EXISTS
-    except DatabaseException.CHECK_VIOLATION:
-        conn.rollback()
-        return Status.ERROR
-    except DatabaseException.NOT_NULL_VIOLATION:
-        conn.rollback()
-        return Status.ERROR
-    except DatabaseException.ConnectionInvalid:
+    except Exception:
         conn.rollback()
         return Status.ERROR
     finally:
@@ -346,7 +364,7 @@ def addFileToDisk(file: File, diskID: int) -> Status:
     except DatabaseException.CHECK_VIOLATION:
         conn.rollback()
         return Status.BAD_PARAMS
-    except DatabaseException.ConnectionInvalid:
+    except Exception:
         conn.rollback()
         return Status.ERROR
     finally:
@@ -392,7 +410,7 @@ def addRAMToDisk(ramID: int, diskID: int) -> Status:
     except DatabaseException.UNIQUE_VIOLATION:
         conn.rollback()
         return Status.ALREADY_EXISTS
-    except DatabaseException.ConnectionInvalid:
+    except Exception:
         conn.rollback()
         return Status.ERROR
     finally:
@@ -409,7 +427,7 @@ def removeRAMFromDisk(ramID: int, diskID: int) -> Status:
             f"DELETE FROM RamsOnDisks WHERE RamId = {ramID} AND DiskId = {diskID};")
         rows_effected, _ = conn.execute(query)
         conn.commit()
-    except DatabaseException:
+    except Exception:
         conn.rollback()
         return Status.ERROR
     finally:
@@ -422,7 +440,7 @@ def removeRAMFromDisk(ramID: int, diskID: int) -> Status:
 
 def averageFileSizeOnDisk(diskID: int) -> float:
     query = sql.SQL(f'SELECT AVG(DiskSizeNeeded) FROM Files f JOIN FilesOnDisks fod ON f.FileId = fod.FileId '
-                    f'WHERE fod.DiskID = {diskID};')
+                    f'WHERE fod.DiskId = {diskID};')
     conn = None
     try:
         conn = Connector.DBConnector()
@@ -440,7 +458,7 @@ def averageFileSizeOnDisk(diskID: int) -> float:
 
 def diskTotalRAM(diskID: int) -> int:
     query = sql.SQL(f'SELECT SUM(Size) FROM Rams r JOIN RamsOnDisks rod ON r.RamId = rod.RamId '
-                    f'WHERE rod.DiskID = {diskID};')
+                    f'WHERE rod.DiskId = {diskID};')
     conn = None
     try:
         conn = Connector.DBConnector()
@@ -484,11 +502,11 @@ def getFilesCanBeAddedToDisk(diskID: int) -> List[int]:
     The list is sorted by fileIDs in descending order.
     """
     query = sql.SQL(f"""SELECT f.FileId FROM Files f
-                            WHERE EXISTS (SELECT d.DiskID FROM Disks d WHERE d.DiskID = {diskID} AND f.DiskSizeNeeded <= d.FreeSpace)
+                            WHERE EXISTS (SELECT d.DiskId FROM Disks d WHERE d.DiskId = {diskID} AND f.DiskSizeNeeded <= d.FreeSpace)
                             ORDER BY f.FileId DESC
                             LIMIT 5""")
     # If we wanted to exclude files that are already on the disk we needed to add before the ORDER BY:
-    # AND NOT EXISTS (SELECT fod.FileId FROM FilesOnDisks fod WHERE fod.DiskID = {diskID} AND f.FileId = fod.FileId)
+    # AND NOT EXISTS (SELECT fod.FileId FROM FilesOnDisks fod WHERE fod.DiskId = {diskID} AND f.FileId = fod.FileId)
     conn = None
     try:
         conn = Connector.DBConnector()
@@ -508,8 +526,8 @@ def getFilesCanBeAddedToDiskAndRAM(diskID: int) -> List[int]:
     The list is sorted in ascending order
     """
     query = sql.SQL(f"""SELECT f.FileId FROM Files f
-                            WHERE EXISTS (SELECT d.DiskID FROM Disks d WHERE d.DiskID = {diskID} AND f.DiskSizeNeeded <= d.FreeSpace)
-                            AND (SELECT SUM(r.Size) FROM Rams r JOIN RamsOnDisks rod ON r.RamId = rod.RamId WHERE rod.DiskID = {diskID}) >= f.DiskSizeNeeded)
+                            WHERE EXISTS (SELECT d.DiskId FROM Disks d WHERE d.DiskId = {diskID} AND f.DiskSizeNeeded <= d.FreeSpace)
+                            AND (SELECT SUM(r.Size) FROM Rams r JOIN RamsOnDisks rod ON r.RamId = rod.RamId WHERE rod.DiskId = {diskID}) >= f.DiskSizeNeeded
                             ORDER BY f.FileId ASC
                             LIMIT 5""")
     conn = None
@@ -529,9 +547,9 @@ def isCompanyExclusive(diskID: int) -> bool:
         manufactured by the same company as all of its associated RAMs.
     """
     query = sql.SQL(f"""SELECT 1 FROM Disks d
-                            WHERE d.DiskID = {diskID}
-                            AND NOT EXISTS (SELECT r.Company FROM Rams r JOIN RamsOnDisks rod ON r.RamId = rod.RamId WHERE rod.DiskID = {diskID}
-                                            AND r.Company != d.ManufacturingCompany) LIMIT 1)""")
+                            WHERE d.DiskId = {diskID}
+                            AND NOT EXISTS (SELECT r.Company FROM Rams r JOIN RamsOnDisks rod ON r.RamId = rod.RamId WHERE rod.DiskId = {diskID}
+                                            AND r.Company != d.ManufacturingCompany) LIMIT 1""")
     conn = None
     try:
         conn = Connector.DBConnector()
@@ -571,10 +589,10 @@ def mostAvailableDisks() -> List[int]:
     """
     Returns a list of disks that can save the most files (limited to 5)
     """
-    query = sql.SQL(f"""SELECT (d.DiskId, COUNT(f.fileId)) FROM Disks d JOIN Files f
-                        WHERE d.FreeSpace >= f.DiskSizeNeeded
+    query = sql.SQL(f"""SELECT d.DiskId, COUNT(f.fileId) FROM Disks d JOIN Files f
+                        ON d.FreeSpace >= f.DiskSizeNeeded
                         GROUP BY d.DiskId
-                        ORDER BY (COUNT(f.fileId) DESC, d.Speed DESC,)
+                        ORDER BY COUNT(f.fileId) DESC, d.Speed DESC
                         LIMIT 5""")
     conn = None
     try:
@@ -591,14 +609,10 @@ def getCloseFiles(fileID: int) -> List[int]:
     """
     Returns a list of files that are on at least 50% of the disks that the given file is on (limit of 10)
     """
-    query = sql.SQL(f"""SELECT fid2 FROM
-                            (SELECT (f1.FileId fid1, f2.FileId fid2, COUNT(fod1.DiskId) CommonDisks) from Files f1 FULL JOIN Files f2
-                                LEFT JOIN FilesOnDisks fod1 ON fod1.FileId = fid1
-                                LEFT JOIN FilesOnDisks fod2 ON fod2.FileId = fid2 AND fod1.DiskId = fod2.DiskId
-                                WHERE CommonDisks*2 >= (SELECT COUNT(fod3.DiskId) FROM Files fod3 WHERE fod3.FileId = 111)
-                                    AND fid1 = 111
-                                GROUP BY fid1, fid2
-                                ORDER BY CommonDisks DESC LIMIT 10) ORDER BY fid2 ASC""")
+    query = sql.SQL(f"""SELECT fid2 FROM FilePairsCommonDisks 
+                        WHERE fid1 = {fileID}
+                            AND CommonDisks*2 >= (SELECT Disks FROM DiskCountPerFile WHERE FileId = {fileID})
+                        ORDER BY CommonDisks DESC, fid2 ASC LIMIT 10""")
     conn = None
     try:
         conn = Connector.DBConnector()
@@ -608,4 +622,3 @@ def getCloseFiles(fileID: int) -> List[int]:
 
     result = [x[0] for x in result.rows]
     return result
-    return []
