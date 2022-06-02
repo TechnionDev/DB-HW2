@@ -602,10 +602,11 @@ def mostAvailableDisks() -> List[int]:
     """
     Returns a list of disks that can save the most files (limited to 5)
     """
-    query = sql.SQL(f"""SELECT d.DiskId, COUNT(f.fileId) FROM Disks d JOIN Files f
+    query = sql.SQL(f"""SELECT d.DiskId, COUNT(f.fileId) FROM Disks d
+                        LEFT JOIN Files f
                         ON d.FreeSpace >= f.DiskSizeNeeded
                         GROUP BY d.DiskId
-                        ORDER BY COUNT(f.fileId) DESC, d.Speed DESC
+                        ORDER BY COUNT(f.fileId) DESC, d.Speed DESC, d.DiskId ASC
                         LIMIT 5""")
     conn = None
     try:
@@ -622,10 +623,11 @@ def getCloseFiles(fileID: int) -> List[int]:
     """
     Returns a list of files that are on at least 50% of the disks that the given file is on (limit of 10)
     """
-    query = sql.SQL(f"""SELECT fid2 FROM FilePairsCommonDisks
+    query = sql.SQL(f"""SELECT * FROM (SELECT fid2 FROM FilePairsCommonDisks
                         WHERE fid1 = {fileID}
                             AND CommonDisks*2 >= (SELECT Disks FROM DiskCountPerFile WHERE FileId = {fileID})
-                        ORDER BY CommonDisks DESC, fid2 ASC LIMIT 10""")
+                        ORDER BY CommonDisks DESC, fid2 ASC LIMIT 10) AS tmp
+						ORDER BY fid2 ASC""")
     conn = None
     try:
         conn = Connector.DBConnector()

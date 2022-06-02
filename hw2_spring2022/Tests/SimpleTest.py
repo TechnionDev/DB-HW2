@@ -49,44 +49,44 @@ class Test(AbstractTest):
             *[File(fileID=i, type="rst", size=10) for i in range(2, 15)],
         ]
         disks = [
-            Disk(diskID=i, brand="DELL", speed=100*i+i, cost=10+i, free_space=1000*i) for i in range(1, 21)
+            Disk(diskID=i, company="DELL", speed=100*i+i, cost=10+i, free_space=1000*i) for i in range(1, 21)
         ]
 
         for i, file in enumerate(files):
             self.assertEqual(Status.OK, Solution.addFile(file), "Should work")
-        for i, disk in enumerate(files):
+        for i, disk in enumerate(disks):
             self.assertEqual(Status.OK, Solution.addDisk(disk), "Should work")
 
         # Add fileId 1 to disks 1-9
         for i in range(9):
             self.assertEqual(Status.OK, Solution.addFileToDisk(
-                1, disks[i].getDiskID()), "Should work")
+                files[0], disks[i].getDiskID()), "Should work")
 
         # Add fileId 2 to disks 4-6
         for i in range(3, 6):
             self.assertEqual(Status.OK, Solution.addFileToDisk(
-                2, disks[i].getDiskID()), "Should work")
+                files[1], disks[i].getDiskID()), "Should work")
 
         # Add fileId 3 to disks 3-6
         for i in range(2, 6):
             self.assertEqual(Status.OK, Solution.addFileToDisk(
-                3, disks[i].getDiskID()), "Should work")
+                files[2], disks[i].getDiskID()), "Should work")
 
         # Add fileId 4 to disks 2-6
         for i in range(1, 6):
             self.assertEqual(Status.OK, Solution.addFileToDisk(
-                4, disks[i].getDiskID()), "Should work")
+                files[3], disks[i].getDiskID()), "Should work")
 
         # Add fileId 5 to disks 6-10
         for i in range(5, 10):
             self.assertEqual(Status.OK, Solution.addFileToDisk(
-                5, disks[i].getDiskID()), "Should work")
+                files[4], disks[i].getDiskID()), "Should work")
 
         # Get list of closest files
-        self.assertEqual([], Solution.closeFiles(
+        self.assertEqual([4], Solution.getCloseFiles(
             files[0].getFileID()), "Should work")
-        self.assertEqual([15, 14, 13, 12, 11, 10, 9, 8, 7, 6],
-                         Solution.closeFiles(files[5].getFileID()), "Should work")
+        self.assertListEqual([1, 2, 3, 4, 5, 7, 8, 9, 10, 11], # fileID 6 isn't close to itself
+                             Solution.getCloseFiles(files[5].getFileID()), "Should work")
 
 
 # *** DO NOT RUN EACH TEST MANUALLY ***

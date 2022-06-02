@@ -17,5 +17,5 @@
     // "python.pipenvPath": "${workspaceFolder}/venv/bin/activate",
     "python.testing.cwd": "./hw2_spring2022/",
     "python.testing.pytestEnabled": false,
-    "python.testing.unittestEnabled": true
+    "python.testing.unittestEnabled": true,
 }

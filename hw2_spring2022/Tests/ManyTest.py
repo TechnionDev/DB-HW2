@@ -644,7 +644,7 @@ class FromGroupTest(AbstractTest):
 
         result = Solution.getCostForType("A")
         expected = disk1_CPR * \
-            (file1.getSize() + file2.getSize() + file3.getSize()) * num_f_disks
+            (file1.getSize() + file2.getSize() + file3.getSize())
         self.assertEqual(expected, result)
 
     def test_getCostForType_type_doesnt_exists(self):
@@ -1078,10 +1078,8 @@ class FromGroupTest(AbstractTest):
         Solution.addFile(file5)
         Solution.addFile(file6)
         res = Solution.mostAvailableDisks()
-        expected = [1]
-        self.assertEqual(len(expected), len(res), "length")
-        for i in range(1):
-            self.assertEqual(expected[i], res[i])
+        expected = [1, 2, 3, 4]
+        self.assertListEqual(expected, res, "List should be equal")
 
     def test_mostAvailableDisks_no_disks(self):
         res = Solution.mostAvailableDisks()
@@ -1097,7 +1095,7 @@ class FromGroupTest(AbstractTest):
         Solution.addDisk(disk3)
         Solution.addDisk(disk4)
         res = Solution.mostAvailableDisks()
-        self.assertEqual(0, len(res))
+        self.assertListEqual([1,2,3,4], res)
 
     ############################################ getCloseFiles #######################################
     def test_getCloseFiles_limit_to_10(self):
